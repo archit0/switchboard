@@ -196,6 +196,28 @@ tokens here — its verify-every-step cascade is ideal for one-shot calls but th
 overhead compounds across agent turns. Full tables + per-task breakdown in
 [`AGENT_BENCH.md`](AGENT_BENCH.md). Reproduce: `python -m bench.agent_bench`.
 
+### HumanEval (coding, pass@1, exec-graded)
+
+The canonical code-generation benchmark — 40-problem subset, graded by **executing the
+official unit tests**:
+
+| backend | pass@1 | total cost |
+|---|---|---|
+| `claude-opus-4-8` | 100% | $0.4997 |
+| `gpt-5.5` | 100% | $0.1155 |
+| `gemini-flash-latest` (cheap single) | 40% | $0.0816 |
+| `router-balanced` | 32.5% | $0.1116 |
+| **`router-cost`** | **100%** | **$0.0495** |
+| `router-quality` | 100% | $0.3254 |
+
+**`router-cost` matches GPT-5.5 and Opus at 100% pass@1 for the lowest cost of any
+backend** — 2.3× cheaper than GPT-5.5, ~10× cheaper than Opus — and does it *without
+calling a frontier model* (its judge escalates failed cheap attempts to a Sonnet-led
+Mixture-of-Agents). The flip side: **`router-balanced` collapses to 32.5%** because
+cheap models are weak at code and balanced has no verifier — the clearest evidence
+that *the judge is what makes routing safe.* Details in [`HUMANEVAL.md`](HUMANEVAL.md).
+Reproduce: `python -m bench.run_humaneval --n 40 --seed 0`.
+
 ---
 
 ## Limitations & next steps
