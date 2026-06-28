@@ -174,6 +174,28 @@ Reproduce: `python -m bench.run_gsm8k --n 50 --seed 0`. Full write-up and honest
 caveats in [`RESULTS.md`](RESULTS.md). (The verifier is what makes routing safe —
 `router-balanced` has none and lost 8 points; `router-cost`'s judge is the fix.)
 
+### Agentic benchmark (tool-using agent)
+
+A minimal ReAct **tool-using agent** (tools: `calc`, `wordcount`, `lookup`) solving 4
+tasks of increasing size, driven by each backend through the *same* harness. All
+backends hit 100% on these deterministic tasks, so the story is **tokens vs. cost**:
+
+| backend | accuracy | total tokens | total cost |
+|---|---|---|---|
+| `claude-opus-4-8` (single) | 100% | 5,885 | $0.10202 |
+| `gpt-5.5` (single) | 100% | 4,846 | $0.01335 |
+| `claude-haiku-4-5` (single) | 100% | 3,646 | $0.00577 |
+| `gemini-flash-latest` (single) | 100% | 4,645 | $0.00289 |
+| `router-quality` | 100% | 6,205 | $0.01073 |
+| `router-cost` | 100% | 10,769 | $0.01264 |
+| **`router-balanced`** | **100%** | 4,472 | **$0.00153** |
+
+`router-balanced` is **~9× cheaper than the GPT-5.5 agent and ~67× cheaper than the
+Opus agent** at the same success rate. Note the twist: `router-cost` spends the *most*
+tokens here — its verify-every-step cascade is ideal for one-shot calls but the judge
+overhead compounds across agent turns. Full tables + per-task breakdown in
+[`AGENT_BENCH.md`](AGENT_BENCH.md). Reproduce: `python -m bench.agent_bench`.
+
 ---
 
 ## Limitations & next steps
