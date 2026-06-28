@@ -1,9 +1,11 @@
-"""switchboard — an OpenAI-compatible LLM router that saves cost without losing quality.
+"""switchboard — a smart, OpenAI-compatible LLM router that saves cost without losing quality.
 
-Point any OpenAI client at the switchboard server and it routes each request to
-the cheapest model that can handle it — easy prompts to a small model, hard ones
-to a parallel Mixture-of-Agents — trading a little latency for large savings while
-holding (or beating) frontier-model quality on a representative workload.
+More than a proxy: it's a tiny *agent* — a triage → verify → escalate loop with a
+controller model, a judge, and a Mixture-of-Agents. Point any OpenAI client at the
+switchboard server and it routes each request to the cheapest model that can handle
+it — easy prompts to a small model, hard ones to a parallel Mixture-of-Agents —
+trading a little latency for large savings while holding (or beating) frontier-model
+quality on a representative workload.
 
 Quickstart (library)::
 
@@ -40,7 +42,7 @@ from switchboard.config import GatewayConfig, cost_usd, price_of
 from switchboard.engine import Engine, RouteResult
 from switchboard.gateway import Completion, Gateway
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "Completion",

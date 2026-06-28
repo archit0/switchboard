@@ -11,3 +11,6 @@ build/
 .ruff_cache/
 .pytest_cache/
 uv.lock
+# local overrides (keep the .example files)
+models.json
+pricing.json

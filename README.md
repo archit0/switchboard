@@ -3,11 +3,17 @@
 [![CI](https://github.com/archit0/switchboard/actions/workflows/ci.yml/badge.svg)](https://github.com/archit0/switchboard/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/switchboard-llm.svg)](https://pypi.org/project/switchboard-llm/)
 
-An **OpenAI-compatible LLM router** that saves cost without losing quality. Point
-any OpenAI client at it and it routes each request to the cheapest model that can
-handle it — easy prompts to a small model, hard ones to a parallel
-**Mixture-of-Agents** — trading a little latency for large savings while holding
-(or beating) frontier-model quality on a representative workload.
+A **smart, OpenAI-compatible LLM router** that saves cost without losing quality.
+More than a proxy — it's a tiny **agent**: a *triage → verify → escalate* loop with
+a controller model, a judge, and a Mixture-of-Agents. Point any OpenAI client at it
+and it routes each request to the cheapest model that can handle it — easy prompts to
+a small model, hard ones to a parallel Mixture-of-Agents — trading a little latency
+for large savings while holding (or beating) frontier-model quality on a
+representative workload.
+
+The model pool defaults to **auto-updating `-latest` aliases** and is fully
+config-driven — point it at new models via `models.json` without touching code (see
+[Configuring the model pool](#configuring-the-model-pool)).
 
 ```python
 from openai import OpenAI
@@ -126,6 +132,30 @@ request ─► [cache] ─► [triage: how hard?] ─► [policy] ──► sing
   proposers + synthesizer), or `cascade` (cheap → judge → escalate).
 - **Cost accounting** — every response carries its internal cost, an estimate of
   what always-Opus would have cost, and the savings %, under a `switchboard` key.
+
+## Configuring the model pool
+
+The pool is **config-driven** so it never goes stale. Defaults use auto-updating
+`-latest` aliases for the cheap/mid tiers (and the latest flagships for the strong
+tier / baseline). To point switchboard at different models **without touching code**,
+drop a `models.json` in the repo root (see `models.json.example`) — any key overrides
+the default:
+
+```json
+{
+  "default_cheap": "gemini-flash-lite-latest",
+  "default_mid":   "gemini-flash-latest",
+  "strong":        ["claude-opus-4-8", "gpt-5.5", "gemini-3.1-pro-preview"],
+  "moa_proposers": ["gemini-flash-latest", "gpt-5.4-mini", "claude-haiku-4-5"],
+  "moa_synthesizer": "claude-sonnet-4-6",
+  "classifier": "gemini-flash-lite-latest",
+  "judge": "gemini-flash-lite-latest"
+}
+```
+
+Pricing works the same way via `pricing.json` (`{"model": [in_per_1M, out_per_1M]}`).
+After changing the pool, verify everything is live with `switchboard models` — the
+gateway's `/v1/models` list is stale and can advertise ids that 404.
 
 ---
 

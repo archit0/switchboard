@@ -22,10 +22,13 @@ from dataclasses import dataclass
 # --------------------------------------------------------------------------- #
 _DEFAULT_PRICING: dict[str, tuple[float, float]] = {
     # cheap tier
+    "gemini-flash-lite-latest": (0.10, 0.40),  # alias: auto-tracks newest flash-lite
     "gemini-3.1-flash-lite": (0.10, 0.40),
+    "gpt-5.4-nano": (0.05, 0.40),
     "gpt-5-nano": (0.05, 0.40),
     "claude-haiku-4-5": (1.00, 5.00),
     # mid tier
+    "gemini-flash-latest": (0.30, 2.50),  # alias: auto-tracks newest flash
     "gemini-3.5-flash": (0.30, 2.50),
     "gpt-5.4-mini": (0.25, 2.00),
     "claude-sonnet-4-6": (3.00, 15.00),
@@ -65,37 +68,63 @@ def cost_usd(model: str, prompt_tokens: int, completion_tokens: int) -> float:
 
 
 # --------------------------------------------------------------------------- #
-# Tiers and pools. Edit these to change routing behaviour.
+# Model pool & tiers — the router's "brain". This is what makes switchboard a
+# tiny agent rather than a static proxy: a controller model triages, a judge
+# verifies, and a Mixture-of-Agents deliberates on the hard cases.
+#
+# Config-driven so it never goes stale: edit the defaults below, OR drop a
+# `models.json` in the repo root to override any key without touching code
+# (same idea as pricing.json). We default to the `-latest` aliases for the
+# cheap/mid tiers so the pool auto-tracks the newest models the gateway serves.
+#
+# NOTE: the gateway's /v1/models list is stale (advertises ids that 404), so
+# always re-check with `switchboard models` after changing the pool.
 # --------------------------------------------------------------------------- #
-# NOTE: the gateway's /v1/models list is stale — it advertises some ids that
-# 404 at call time (e.g. gemini-3-pro-preview, claude-fable-5 -> "use Opus 4.8").
-# Every model below has been verified to actually answer. Run
-# `switchboard models` to re-check after any edit.
-CHEAP = ["gemini-3.1-flash-lite", "gpt-5-nano", "claude-haiku-4-5"]
-MID = ["gemini-3.5-flash", "gpt-5.4-mini", "claude-sonnet-4-6"]
-STRONG = ["claude-opus-4-8", "gpt-5.5", "gemini-3.1-pro-preview"]
+_DEFAULT_POOL: dict = {
+    "cheap": ["gemini-flash-lite-latest", "gpt-5.4-nano", "claude-haiku-4-5"],
+    "mid": ["gemini-flash-latest", "gpt-5.4-mini", "claude-sonnet-4-6"],
+    "strong": ["claude-opus-4-8", "gpt-5.5", "gemini-3.1-pro-preview"],
+    # The agent's controller: a cheap, fast, reliable model for triage + judging.
+    "classifier": "gemini-flash-lite-latest",
+    "judge": "gemini-flash-lite-latest",
+    # Default single-model pick per tier.
+    "default_cheap": "gemini-flash-lite-latest",
+    "default_mid": "gemini-flash-latest",
+    # Mixture-of-Agents for the hard tier. Diverse *providers* give diversity
+    # without temperature (gpt-5 reasoning models reject non-default temperature).
+    "moa_proposers": ["gemini-flash-latest", "gpt-5.4-mini", "claude-haiku-4-5"],
+    "moa_synthesizer": "claude-sonnet-4-6",
+    # Frontier baseline the router is benchmarked against ("always the big model").
+    "baselines": ["claude-opus-4-8"],
+    "primary_baseline": "claude-opus-4-8",
+}
 
-# Reliable, cheap, low-latency model used for triage + judging. Gemini
-# flash-lite was the most reliable for short structured outputs in testing
-# (gpt-5-nano spent its whole budget on hidden reasoning and returned empty).
-CLASSIFIER_MODEL = "gemini-3.1-flash-lite"
-JUDGE_MODEL = "gemini-3.1-flash-lite"
 
-# Default single-model picks per tier.
-DEFAULT_CHEAP = "gemini-3.1-flash-lite"
-DEFAULT_MID = "gemini-3.5-flash"
+def _load_pool() -> dict:
+    pool = dict(_DEFAULT_POOL)
+    path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models.json")
+    if os.path.exists(path):
+        try:
+            with open(path) as f:
+                pool.update(json.load(f))
+        except Exception as e:  # noqa: BLE001 - best effort, never crash on bad file
+            print(f"[config] warning: could not load models.json: {e}")
+    return pool
 
-# Mixture-of-Agents (used for the hard tier). Diverse *providers* give
-# diversity without needing temperature (gpt-5 reasoning models reject
-# non-default temperature anyway).
-MOA_PROPOSERS = ["gemini-3.5-flash", "gpt-5.4-mini", "claude-haiku-4-5"]
-MOA_SYNTHESIZER = "claude-sonnet-4-6"
 
-# Baselines we benchmark the router against ("always use the big model").
-# claude-fable-5 is advertised by the gateway but 404s ("use Opus 4.8"), so the
-# practical frontier baseline here is Opus 4.8.
-BASELINE_MODELS = ["claude-opus-4-8"]
-PRIMARY_BASELINE = "claude-opus-4-8"
+_POOL = _load_pool()
+
+CHEAP: list[str] = _POOL["cheap"]
+MID: list[str] = _POOL["mid"]
+STRONG: list[str] = _POOL["strong"]
+CLASSIFIER_MODEL: str = _POOL["classifier"]
+JUDGE_MODEL: str = _POOL["judge"]
+DEFAULT_CHEAP: str = _POOL["default_cheap"]
+DEFAULT_MID: str = _POOL["default_mid"]
+MOA_PROPOSERS: list[str] = _POOL["moa_proposers"]
+MOA_SYNTHESIZER: str = _POOL["moa_synthesizer"]
+BASELINE_MODELS: list[str] = _POOL["baselines"]
+PRIMARY_BASELINE: str = _POOL["primary_baseline"]
 
 
 @dataclass

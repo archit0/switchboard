@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "switchboard-llm"
-description = "An OpenAI-compatible LLM router that saves cost without losing quality."
+description = "A smart, OpenAI-compatible LLM router — a tiny triage-verify-escalate agent that saves cost without losing quality."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"

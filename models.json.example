@@ -1,0 +1,14 @@
+{
+  "_comment": "Copy to models.json to override the model pool without editing code. Any key is optional; omitted keys keep the built-in defaults. Verify with `switchboard models`.",
+  "cheap": ["gemini-flash-lite-latest", "gpt-5.4-nano", "claude-haiku-4-5"],
+  "mid": ["gemini-flash-latest", "gpt-5.4-mini", "claude-sonnet-4-6"],
+  "strong": ["claude-opus-4-8", "gpt-5.5", "gemini-3.1-pro-preview"],
+  "classifier": "gemini-flash-lite-latest",
+  "judge": "gemini-flash-lite-latest",
+  "default_cheap": "gemini-flash-lite-latest",
+  "default_mid": "gemini-flash-latest",
+  "moa_proposers": ["gemini-flash-latest", "gpt-5.4-mini", "claude-haiku-4-5"],
+  "moa_synthesizer": "claude-sonnet-4-6",
+  "baselines": ["claude-opus-4-8"],
+  "primary_baseline": "claude-opus-4-8"
+}
